@@ -2,46 +2,6 @@
 # See LICENSE and README.md
 # Latest build : github.com/diracs-delta
 
-# NAME (EN):
-# 	normalizer.py -- Selectively normalizes discharge capacity data.
-
-# SYNOPSIS (EN):
-#
-# 	normalizer.py [-v]
-
-# DESCRIPTION (EN):
-#
-# 	normalizer.py is a CLI that reads an input directory containing .csv
-# 	files of battery cycle data, and removes irrelevant data (all rows with
-# 	a submaximum discharge capacity, indicating the file. It then selects
-# 	data points based on the following criteria:
-#
-# 	If the percent difference in the maximum and minimum current > 1%, then
-# 	only the first trial and all other trials with > 1% current difference
-# 	are kept. Otherwise, the first trial and every 100th trial (1, 100, 200,
-# 	...) including the last are kept. fun
-#
-# 	Then, the discharge capacities are normalized from 0 to 1 and the data
-# 	is output to a separate directory within the original specified
-# 	directory.
-#
-# 	This is a highly specific usecase, see README.md for more details.
-
-# OPTIONS (EN):
-#
-# 	[-v]	Generate verbose output for debugging. All other options are
-# 		ignored entirely.
-
-# USAGE (EN):
-# On Windows:
-#
-# 	Open normalizer.py with IDLE and press F5 to run this script. Then
-# 	follow the instructions.
-#
-# On UNIX-like distributions:
-#
-# 	Run ./normalizer.py in a terminal and follow the instructions.
-
 import os
 import sys
 import csv
@@ -254,7 +214,7 @@ def select_cycles(reader, cycle_index, current_index, max_current, max_cycles):
 	# cycle to sample.
 	if(trials == {1}):
 		trials.add(*range(100, max_cycles, 100))
-	
+		trials.add(max_cycles)
 	return trials
 			
 # oh right, almost forgot. we have to call main(). :^)
