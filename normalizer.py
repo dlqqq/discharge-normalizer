@@ -1,0 +1,261 @@
+#!/usr/bin/env python2.7
+# See LICENSE and README.md
+# Latest build : github.com/diracs-delta
+
+# NAME (EN):
+# 	normalizer.py -- Selectively normalizes discharge capacity data.
+
+# SYNOPSIS (EN):
+#
+# 	normalizer.py [-v]
+
+# DESCRIPTION (EN):
+#
+# 	normalizer.py is a CLI that reads an input directory containing .csv
+# 	files of battery cycle data, and removes irrelevant data (all rows with
+# 	a submaximum discharge capacity, indicating the file. It then selects
+# 	data points based on the following criteria:
+#
+# 	If the percent difference in the maximum and minimum current > 1%, then
+# 	only the first trial and all other trials with > 1% current difference
+# 	are kept. Otherwise, the first trial and every 100th trial (1, 100, 200,
+# 	...) including the last are kept. fun
+#
+# 	Then, the discharge capacities are normalized from 0 to 1 and the data
+# 	is output to a separate directory within the original specified
+# 	directory.
+#
+# 	This is a highly specific usecase, see README.md for more details.
+
+# OPTIONS (EN):
+#
+# 	[-v]	Generate verbose output for debugging. All other options are
+# 		ignored entirely.
+
+# USAGE (EN):
+# On Windows:
+#
+# 	Open normalizer.py with IDLE and press F5 to run this script. Then
+# 	follow the instructions.
+#
+# On UNIX-like distributions:
+#
+# 	Run ./normalizer.py in a terminal and follow the instructions.
+
+import os
+import sys
+import csv
+import tempfile
+
+verbose = False
+if len(sys.argv) > 1:
+	if sys.argv[1] == "-v":
+		verbose = True
+
+def main():
+	print('Type "help" for info or type "quit" to quit.')
+	while True:
+		dir = raw_input("Enter the full path of the .csv directory: ")
+
+		if dir == "help" or dir == "":
+			print("============================================"*2)
+			print("The full path of a directory should look like "
+				"[DRIVE]://[DATA_FOLDER] on Windows systems.\n"
+				"You can copy this path by right clicking on the data "
+				"folder in File Explorer in Windows.\n"
+				'Do not include a trailing "/".\n'
+				"\tex. D://Data/20190605/SWCNT1 where the folder SWCNT1 "
+				"contains the .csv files.\n\n"
+				"Make sure the columns are labelled as follows:\n"
+				'The cycle index column is labelled as "Cycle_Index".\n'
+				'The current column is labelled as "Current".\n'
+				'The discharge capacity column is labelled as "Discharge_Capacity".')
+			print("============================================"*2)
+		elif dir == "quit":
+			break
+		else:
+			recurse = raw_input('Normalize data recursively? Press "Enter" if you don\'t know what this means! [y/N]: ').lower()
+			if recurse == "":
+				recurse = "n"
+			if recurse != "y" and recurse != "n":
+				print('Not a valid option. Defaulting to "n".')
+				recurse = "n"
+
+			file_list = find_files(dir, recurse)
+			if(verbose == True):
+				print("[DEBUG]: Detected files: {0}".format(file_list))
+			
+			state = normalize(file_list)
+			if state == 0:
+				print("Files normalized successfully. <++>")
+
+# Returns a list of 2-tuples, containing the path and a list of .csv files.
+# 	>>> find_files("/home/USER/Documents", "y")
+# 	[(/home/USER/Documents, [a.csv, b.csv]), (/home/USER/Documents/nested, [b.csv])]
+#
+def find_files(dir, recurse):
+	csv_list = []
+
+	# find all the .csv files
+	for (path, x, files) in os.walk(dir):
+		if recurse == "n":
+			if path == dir:
+				csv_list += [(path, [file for file in files if file[-4:] == ".csv"])]
+		elif recurse == "y":
+			 csv_list += [(path, [file for file in files if file[-4:] == ".csv"])]
+
+	# remove paths without any .csv files
+	i = 0
+	while i < len(csv_list):
+		if csv_list[i][1] == []:
+			csv_list.pop(i)
+			i = 0
+		i += 1
+
+	return csv_list
+
+
+# Normalizes .csv files within a file list output by find_files(). 
+# 
+# Calls the clean_csv() function, normalizes the returned data, and outputs
+# processed .csv data into a new directory nested within the existing directory.
+# Returns an integer return value. The return value is 0 on successful
+# normalization of a data set termination. Otherwise, the return value is
+# negative and the returned string is used for error output.
+#
+def normalize(file_list):
+	if(file_list == []):
+		return -1
+	for dir_and_files in file_list:
+		
+		# Prepare for normalization:
+		# first make the directory for output in each CSV directory
+		try:
+			output_dir = os.path.join(dir_and_files[0],"Normalized_Discharge_Capacities")
+			os.mkdir(output_dir)
+		except os.error:
+			if(verbose == True):
+				print("[DEBUG]: Exception thrown by os.mkdir(). "
+				"Output directory likely already exists in {0}. ".format(dir_and_files[0]))
+		for filename in dir_and_files[1]:
+
+			# check if .csv files are valid
+			full_filename = os.path.join(dir_and_files[0], filename)
+			csv_reader = csv.reader(open(full_filename))
+			csv_valid = True
+			try:
+				header = next(csv_reader)
+				cycle_index = header.index("Cycle_Index")
+				current_index = header.index("Current")
+				discharge_index = header.index("Discharge_Capacity")
+			except ValueError:
+				print(
+				"[ERROR]: This file {0} is not properly named. See help for more info. Skipping...".format(full_filename)
+				)
+				csv_valid = False
+				continue
+			except StopIteration:
+				print("[ERROR]: The file {0} is empty. Skipping...".format(full_filename))
+				csv_valid = False
+				continue
+			
+			# instantiate needed output variables and objects 
+			output_filename = os.path.join(output_dir,"Normalized-" + filename)
+			output_file = open(output_filename, "w+")
+			output_writer = csv.writer(output_file)
+
+			clean_file = tempfile.TemporaryFile()
+			clean_reader = csv.reader(clean_file)
+			clean_writer = csv.writer(clean_file)
+			clean_writer.writerow(header)
+
+			# call the clean_csv() and select_cycles() functions
+			print("[INFO]: Performing initial cleaning of {0} in {1}.".format(filename, tempfile.tempdir))
+			(max_current, max_cycles) = clean_csv(csv_reader, clean_writer, current_index, cycle_index)
+			print("[INFO]: Maximum discharge current of {0} is {1}A after {2} cycles.".format(filename, max_current, max_cycles))
+			clean_file.seek(0)
+			selected_cycles = select_cycles(clean_reader, cycle_index, current_index, max_current, max_cycles)
+			cycle_list = list(selected_cycles)
+			cycle_list.sort()
+			print("[INFO]: Selected cycles for {0}: {1}".format(filename, cycle_list))
+			
+			# select relevant cycles and get maximum discharge
+			# capacities. this is written in the dictionary
+			# "trial_dict", each entry of the form
+			# cycle:max_capacity.
+
+			select_file = tempfile.TemporaryFile()
+			select_writer = csv.writer(select_file)
+			select_reader = csv.reader(select_file)
+			clean_file.seek(0)
+			select_writer.writerow(header)
+			next(clean_file)
+			trial_dict = dict()
+			for line in clean_reader:
+				cycle = int(line[cycle_index])
+				capacity = float(line[discharge_index])
+				if(cycle in selected_cycles):
+					select_writer.writerow(line)
+					if(capacity > trial_dict.get(cycle)):
+						trial_dict[cycle] = capacity
+			
+			print("[INFO]: Maximum discharge capacities per trial: ")
+			for i in sorted(list(trial_dict.keys())):
+				print("\t{0}: \t{1}".format(i, trial_dict[i]))
+
+			# normalize and write to the final output file
+			select_file.seek(0)
+			output_writer.writerow(header)
+			next(select_file)
+			
+			for line in select_reader:
+				cycle = int(line[cycle_index])
+				line[discharge_index] = float(line[discharge_index]) / trial_dict[cycle]
+				output_writer.writerow(line)
+	return 0
+
+# Writes only the rows containing discharge data to a .csv file through the
+# csv.writer object passed as the parameter "writer". Returns a 2-tuple of the
+# maximum (negative) discharge current detected and the number of cycles present
+# in the data.
+def clean_csv(csv_reader, writer, current_index, cycle_index):
+	max_current = 0
+	max_cycles = 0
+	for line in csv_reader:
+		data_line = [float(i) if "." in i else int(i) for i in line]
+		current = data_line[current_index]
+		cycle = data_line[cycle_index]
+		if(current < 0):
+			writer.writerow(data_line)
+			if(current < max_current):
+				max_current = current
+			if(max_cycles < cycle):
+				max_cycles = cycle
+
+	return (max_current, max_cycles)
+
+# Returns a set of selected trials from a csv.reader object passed as the
+# parameter "reader".
+def select_cycles(reader, cycle_index, current_index, max_current, max_cycles):
+	# skip header and add the first trial
+	next(reader)
+	trials = {1}
+	
+	for line in reader:
+		data_line = [float(i) if "." in i else int(i) for i in line]
+		cycle = data_line[cycle_index]
+		current = data_line[current_index]
+
+		# detect anamolous cycles through a large change in current.
+		if(((max_current - current) / max_current) > 0.01):
+			trials.add(cycle)
+	
+	# if no anomalous data cycles are detected, just pick every hundredth
+	# cycle to sample.
+	if(trials == {1}):
+		trials.add(*range(100, max_cycles, 100))
+	
+	return trials
+			
+# oh right, almost forgot. we have to call main(). :^)
+main()
