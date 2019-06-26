@@ -6,7 +6,7 @@
 
 `normalizer.py` -- selectively normalizes discharge capacity data
 
-## description 
+## description
 
 `normalizer.py` is a command line interface (CLI) written in Python 2.7 that
 reads an input directory containing .csv files of battery cycle data. It then
@@ -17,14 +17,14 @@ within the original directory, named `Normalized_Discharge_Capacities`.
 Data is selected on the following criteria:
 
 * If the percent difference between the global maximum current (over all cycles)
-  and any current measurement within a cycle is greater than 1%, then only the
-  first cycle and all other cycles with >1% current difference are selected. A
+  and any current measurement within a cycle is greater than 10%, then only the
+  first cycle and all other cycles with >10% current difference are selected. A
   significant change in current indicates a change within the cycling parameters
   (e.g.  power consumption), and hence the data should be kept and analyzed
   during these cycles.
 
 * Otherwise (when no anomalous cycles are detected), then only the first, last, and
-  every 100th trial in between are kept. 
+  every 100th trial in between are kept.
 
 ## options
 
