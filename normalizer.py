@@ -143,28 +143,27 @@ def normalize(file_list):
 		print("[INFO]: Selected cycles for {0}: {1}"
 			"".format(filename, cycle_list))
 
-		# select relevant cycles and get maximum discharge
-		# capacities. this is written in the dictionary
-		# "trial_dict", each entry of the form
-		# cycle:max_capacity.
+		# select relevant cycles and get maximum discharge capacities.
+		# this is written in the dictionary "cycle_dict", each entry of
+		# the form cycle:max_capacity.
 		select_file = tempfile.TemporaryFile()
 		select_writer = csv.writer(select_file)
 		select_reader = csv.reader(select_file)
 		clean_file.seek(0)
 		select_writer.writerow(header)
 		next(clean_file)
-		trial_dict = dict()
+		cycle_dict = dict()
 		for line in clean_reader:
 			cycle = int(line[cycle_index])
 			capacity = float(line[discharge_index])
 			if(cycle in selected_cycles):
 				select_writer.writerow(line)
-				if(capacity > trial_dict.get(cycle)):
-					trial_dict[cycle] = capacity
+				if(capacity > cycle_dict.get(cycle)):
+					cycle_dict[cycle] = capacity
 
-		print("[INFO]: Maximum discharge capacities per trial: ")
-		for i in sorted(list(trial_dict.keys())):
-			print("\t{0}: \t{1}".format(i, trial_dict[i]))
+		print("[INFO]: Maximum discharge capacities per cycle: ")
+		for i in sorted(list(cycle_dict.keys())):
+			print("\t{0}: \t{1}".format(i, cycle_dict[i]))
 
 		# normalize and write to the final output file
 		select_file.seek(0)
@@ -174,7 +173,7 @@ def normalize(file_list):
 		for line in select_reader:
 			cycle = int(line[cycle_index])
 			line[discharge_index] = (float(line[discharge_index])
-							/ trial_dict[cycle])
+							/ cycle_dict[cycle])
 			output_writer.writerow(line)
 	return 0
 
@@ -198,13 +197,13 @@ def clean_csv(csv_reader, writer, current_index, cycle_index):
 
 	return (max_current, max_cycles)
 
-# Returns a set of selected trials from a csv.reader object passed as the
-# parameter "reader". For a full description of how trials are selected, read
+# Returns a set of selected cycles from a csv.reader object passed as the
+# parameter "reader". For a full description of how cycles are selected, read
 # the README.md.
 def select_cycles(reader, cycle_index, current_index, max_current, max_cycles):
-	# skip header and add the first trial
+	# skip header and add the first cycle
 	next(reader)
-	trials = {1}
+	cycles = {1}
 
 	# detect anamolous cycles through a large change in current.
 	for line in reader:
@@ -212,14 +211,14 @@ def select_cycles(reader, cycle_index, current_index, max_current, max_cycles):
 		cycle = data_line[cycle_index]
 		current = data_line[current_index]
 		if(((max_current - current) / max_current) > 0.1):
-			trials.add(cycle)
+			cycles.add(cycle)
 
 	# if no anomalous data cycles are detected, just pick every hundredth
 	# cycle to sample. including the last.
-	if(trials == {1}):
-		trials.add(*range(100, max_cycles, 100))
-		trials.add(max_cycles)
-	return trials
+	if(cycles == {1}):
+		cycles.add(*range(100, max_cycles, 100))
+		cycles.add(max_cycles)
+	return cycles
 
 # oh right, almost forgot. we have to call main(). :^)
 main()
