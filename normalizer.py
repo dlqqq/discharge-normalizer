@@ -18,23 +18,32 @@ def main():
 		dir = raw_input("Enter the full path of the .csv directory: ")
 
 		if dir == "help" or dir == "":
-			print("============================================"*2)
+			print("=========================================="*2)
 			print("The full path of a directory should look like "
-				"[DRIVE]://[DATA_FOLDER] on Windows systems.\n"
-				"You can copy this path by right clicking on the data "
-				"folder in File Explorer in Windows.\n"
+				"[DRIVE]://[DATA_FOLDER] on Windows.\n"
+				"You can copy this path by right clicking on "
+				"the data folder in File Explorer.\n"
 				'Do not include a trailing "/".\n'
-				"\tex. D://Data/20190605/SWCNT1 where the folder SWCNT1 "
-				"contains the .csv files.\n\n"
-				"Make sure the columns are labelled as follows:\n"
-				'The cycle index column is labelled as "Cycle_Index".\n'
-				'The current column is labelled as "Current".\n'
-				'The discharge capacity column is labelled as "Discharge_Capacity".')
-			print("============================================"*2)
+				"\tex. D://Data/20190605/SWCNT1 where the "
+				"folder SWCNT1 contains the .csv files.\n\n"
+				"On UNIX-like systems, the full path begins "
+				"in the root directory /.\n\n"
+				"Make sure the columns are labelled as "
+				"follows:\n"
+				'The cycle index column is labelled as '
+				'"Cycle_Index".\n'
+				'The current column is labelled as '
+				'"Current".\n'
+				'The discharge capacity column is labelled as '
+				'"Discharge_Capacity".')
+			print("=========================================="*2)
 		elif dir == "quit":
 			break
 		else:
-			recurse = raw_input('Normalize data recursively? Press "Enter" if you don\'t know what this means! [y/N]: ').lower()
+			recurse = raw_input('Normalize data recursively? Press '
+						'"Enter" if you don\'t know '
+						'what this means! [y/N]: '
+						'').lower()
 			if recurse == "":
 				recurse = "n"
 			if recurse != "y" and recurse != "n":
@@ -43,7 +52,8 @@ def main():
 
 			file_list = find_files(dir, recurse)
 			if(verbose == True):
-				print("[DEBUG]: Detected files: {0}".format(file_list))
+				print("[DEBUG]: Detected files: {0}"
+					"".format(file_list))
 
 			state = normalize(file_list)
 			if state == 0:
@@ -68,7 +78,7 @@ def find_files(dir, recurse):
 # Calls the clean_csv() function, normalizes the returned data, and outputs
 # processed .csv data into a new directory nested within the existing directory.
 # Returns an integer return value. The return value is 0 on successful
-# normalization of a data set termination. Otherwise, the return value is
+# normalization of the files in `file_list`. Otherwise, the return value is
 # negative and the returned string is used for error output.
 #
 def normalize(file_list):
@@ -93,35 +103,43 @@ def normalize(file_list):
 			current_index = header.index("Current")
 			discharge_index = header.index("Discharge_Capacity")
 		except ValueError:
-			print(
-			"[ERROR]: This file {0} is not properly named. See help for more info. Skipping...".format(full_filename)
-			)
+			print("[ERROR]: This file {0} is not properly named. "
+				"See help for more info. Skipping..."
+				"".format(full_filename))
 			csv_valid = False
 			continue
 		except StopIteration:
-			print("[ERROR]: The file {0} is empty. Skipping...".format(full_filename))
+			print("[ERROR]: The file {0} is empty. Skipping..."
+				"".format(full_filename))
 			csv_valid = False
 			continue
 
 		# instantiate needed output variables and objects
-		output_filename = os.path.join(output_dir, "Normalized-" + filename)
+		output_filename = os.path.join(output_dir, "Normalized-"
+						+ filename)
 		output_file = open(output_filename, "w+")
 		output_writer = csv.writer(output_file)
-
 		clean_file = tempfile.TemporaryFile()
 		clean_reader = csv.reader(clean_file)
 		clean_writer = csv.writer(clean_file)
 		clean_writer.writerow(header)
 
 		# call the clean_csv() and select_cycles() functions
-		print("[INFO]: Performing initial cleaning of {0} in {1}.".format(filename, tempfile.tempdir))
-		(max_current, max_cycles) = clean_csv(csv_reader, clean_writer, current_index, cycle_index)
-		print("[INFO]: Maximum discharge current of {0} is {1}A after {2} cycles.".format(filename, max_current, max_cycles))
+		print("[INFO]: Performing initial cleaning of {0} in {1}."
+			"".format(filename, tempfile.tempdir))
+		(max_current, max_cycles) = clean_csv(csv_reader, clean_writer,
+							current_index,
+							cycle_index)
+		print("[INFO]: Maximum discharge current of {0} is {1}A after "
+			"{2} cycles.".format(filename, max_current, max_cycles))
 		clean_file.seek(0)
-		selected_cycles = select_cycles(clean_reader, cycle_index, current_index, max_current, max_cycles)
+		selected_cycles = select_cycles(clean_reader, cycle_index,
+						current_index, max_current,
+						max_cycles)
 		cycle_list = list(selected_cycles)
 		cycle_list.sort()
-		print("[INFO]: Selected cycles for {0}: {1}".format(filename, cycle_list))
+		print("[INFO]: Selected cycles for {0}: {1}"
+			"".format(filename, cycle_list))
 
 		# select relevant cycles and get maximum discharge
 		# capacities. this is written in the dictionary
@@ -153,7 +171,8 @@ def normalize(file_list):
 
 		for line in select_reader:
 			cycle = int(line[cycle_index])
-			line[discharge_index] = float(line[discharge_index]) / trial_dict[cycle]
+			line[discharge_index] = (float(line[discharge_index])
+							/ trial_dict[cycle])
 			output_writer.writerow(line)
 	return 0
 
@@ -178,23 +197,23 @@ def clean_csv(csv_reader, writer, current_index, cycle_index):
 	return (max_current, max_cycles)
 
 # Returns a set of selected trials from a csv.reader object passed as the
-# parameter "reader".
+# parameter "reader". For a full description of how trials are selected, read
+# the README.md.
 def select_cycles(reader, cycle_index, current_index, max_current, max_cycles):
 	# skip header and add the first trial
 	next(reader)
 	trials = {1}
 
+	# detect anamolous cycles through a large change in current.
 	for line in reader:
 		data_line = [float(i) if "." in i else int(i) for i in line]
 		cycle = data_line[cycle_index]
 		current = data_line[current_index]
-
-		# detect anamolous cycles through a large change in current.
 		if(((max_current - current) / max_current) > 0.01):
 			trials.add(cycle)
 
 	# if no anomalous data cycles are detected, just pick every hundredth
-	# cycle to sample.
+	# cycle to sample. including the last.
 	if(trials == {1}):
 		trials.add(*range(100, max_cycles, 100))
 		trials.add(max_cycles)
