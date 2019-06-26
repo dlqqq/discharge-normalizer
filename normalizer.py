@@ -59,8 +59,18 @@ def main():
 			print("\t{0}".format(filename))
 
 		state = normalize(file_list)
-		if state == 0:
-			print("Files normalized successfully. <++>")
+		if state == "no_files":
+			print("[ERROR]: No .csv files exist in the directory.")
+		elif state == "success":
+			print("[SUCCESS]: All files normalized successfully.")
+		elif state == "some_success":
+			print("[WARNING]: Some files not normalized. "
+				'Look for "[ERROR]" in the output above for '
+				"details.")
+		elif state == "no_success":
+			print("[ERROR]: No files normalized. "
+				'Look for "[ERROR]" in the output above for '
+				"details.")
 
 # Returns a list of .csv files within the directory specified by the `dir`
 # parameter. Supports recursion based on `recurse` parameter.
@@ -85,8 +95,11 @@ def find_files(dir, recurse):
 # negative and the returned string is used for error output.
 #
 def normalize(file_list):
+	errors = False
+	processed = False
 	if(file_list == []):
-		return -1
+		return "no_files"
+
 	for full_filename in file_list:
 		dir = os.path.dirname(full_filename)
 		filename = os.path.basename(full_filename)
@@ -110,12 +123,15 @@ def normalize(file_list):
 				"See help for more info. Skipping..."
 				"".format(full_filename))
 			csv_valid = False
+			errors = True
 			continue
 		except StopIteration:
 			print("[ERROR]: The file {0} is empty. Skipping..."
 				"".format(full_filename))
 			csv_valid = False
+			errors = True
 			continue
+		processed = True
 
 		# instantiate needed output variables and objects
 		output_filename = os.path.join(output_dir, "Normalized-"
@@ -176,7 +192,11 @@ def normalize(file_list):
 			line[discharge_index] = (float(line[discharge_index])
 							/ cycle_dict[cycle])
 			output_writer.writerow(line)
-	return 0
+	if(processed == False):
+		return "no_success"
+	elif(errors == True):
+		return "some_success"
+	return "success"
 
 # Writes only the rows containing discharge data to a .csv file through the
 # csv.writer object passed as the parameter "writer". Returns a 2-tuple of the
