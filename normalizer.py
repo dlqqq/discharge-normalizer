@@ -113,8 +113,8 @@ def normalize(file_list):
 			current_index = header.index("Current")
 			discharge_index = header.index("Discharge_Capacity")
 		except ValueError:
-			print("[ERROR]: This file {0} is not properly named. "
-				"See help for more info. Skipping..."
+			print("[ERROR]: This file {0} is not properly named.\n"
+				"[.....]: See help for more info. Skipping..."
 				"".format(full_filename))
 			csv_valid = False
 			errors = True
