@@ -211,7 +211,7 @@ def select_cycles(reader, cycle_index, current_index, max_current, max_cycles):
 		data_line = [float(i) if "." in i else int(i) for i in line]
 		cycle = data_line[cycle_index]
 		current = data_line[current_index]
-		if(((max_current - current) / max_current) > 0.01):
+		if(((max_current - current) / max_current) > 0.1):
 			trials.add(cycle)
 
 	# if no anomalous data cycles are detected, just pick every hundredth
