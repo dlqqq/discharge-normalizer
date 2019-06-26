@@ -54,8 +54,9 @@ def main():
 			recurse = "n"
 
 		file_list = find_files(dir, recurse)
-		if(verbose == True):
-			print("[DEBUG]: Detected files: {0}".format(file_list))
+		print("[INFO]: Detected files: ")
+		for filename in file_list:
+			print("\t{0}".format(filename))
 
 		state = normalize(file_list)
 		if state == 0:
