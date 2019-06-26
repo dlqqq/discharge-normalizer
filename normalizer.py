@@ -16,7 +16,6 @@ def main():
 	print('Type "help" for info or type "quit" to quit.')
 	while True:
 		dir = raw_input("Enter the full path of the .csv directory: ")
-
 		if dir == "help" or dir == "":
 			print("=========================================="*2)
 			print("The full path of a directory should look like "
@@ -37,27 +36,26 @@ def main():
 				'The discharge capacity column is labelled as '
 				'"Discharge_Capacity".')
 			print("=========================================="*2)
+			continue
 		elif dir == "quit":
 			break
-		else:
-			recurse = raw_input('Normalize data recursively? Press '
-						'"Enter" if you don\'t know '
-						'what this means! [y/N]: '
-						'').lower()
-			if recurse == "":
-				recurse = "n"
-			if recurse != "y" and recurse != "n":
-				print('Not a valid option. Defaulting to "n".')
-				recurse = "n"
 
-			file_list = find_files(dir, recurse)
-			if(verbose == True):
-				print("[DEBUG]: Detected files: {0}"
-					"".format(file_list))
+		recurse = raw_input('Normalize data recursively? Press "Enter "'
+					'if you don\'t know what this means! '
+					'[y/N]: ').lower()
+		if recurse == "":
+			recurse = "n"
+		if recurse != "y" and recurse != "n":
+			print('Not a valid option. Defaulting to "n".')
+			recurse = "n"
 
-			state = normalize(file_list)
-			if state == 0:
-				print("Files normalized successfully. <++>")
+		file_list = find_files(dir, recurse)
+		if(verbose == True):
+			print("[DEBUG]: Detected files: {0}".format(file_list))
+
+		state = normalize(file_list)
+		if state == 0:
+			print("Files normalized successfully. <++>")
 
 # Returns a list of .csv files within the directory specified by the `dir`
 # parameter. Supports recursion based on `recurse` parameter.
