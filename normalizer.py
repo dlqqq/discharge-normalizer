@@ -39,6 +39,10 @@ def main():
 			continue
 		elif dir == "quit":
 			break
+		elif os.path.isdir(dir) == False:
+			print('[ERROR]: {0} is not a valid directory. See '
+				'"help" for more info.'.format(dir))
+			continue
 
 		recurse = raw_input('Normalize data recursively? Press "Enter "'
 					'if you don\'t know what this means! '
