@@ -97,11 +97,27 @@ def normalize(file_list):
 	for full_filename in file_list:
 		dir = os.path.dirname(full_filename)
 		filename = os.path.basename(full_filename)
+		output_dir = os.path.join(dir, "Normalized_Discharge"
+						"_Capacities")
+
+		output_filename = os.path.join(output_dir, "Normalized-"
+						+ filename)
+
+		# skip file if it has already been normalized
+		if os.path.isfile(output_filename):
+			print("[ERROR]: {0} has already been normalized. "
+				"Skipping...".format(full_filename))
+			errors = True
+			continue
+		# skip file if it is a normalized output file
+		if filename.startswith("Normalized-"):
+			print("[ERROR]: {0} is a normalized output file. "
+				"Skipping...".format(full_filename))
+			errors = True
+			continue
 
 		# make the output directory
 		if("Normalized_Discharge_Capacities" not in os.listdir(dir)):
-			output_dir = os.path.join(dir,
-					"Normalized_Discharge_Capacities")
 			os.mkdir(output_dir)
 
 		# check if .csv files are valid
@@ -128,8 +144,6 @@ def normalize(file_list):
 		processed = True
 
 		# instantiate needed output variables and objects
-		output_filename = os.path.join(output_dir, "Normalized-"
-						+ filename)
 		output_file = open(output_filename, "w+")
 		output_writer = csv.writer(output_file)
 		clean_file = tempfile.TemporaryFile()
