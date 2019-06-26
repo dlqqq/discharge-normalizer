@@ -26,13 +26,6 @@ Data is selected on the following criteria:
 * Otherwise (when no anomalous cycles are detected), then only the first, last, and
   every 100th trial in between are kept.
 
-## options
-
-```
-[-v]	Generate verbose output for debugging. All other options are ignored
-	entirely.
-```
-
 ## usage
 
 ### On UNIX-like distributions:

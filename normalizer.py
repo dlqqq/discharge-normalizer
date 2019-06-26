@@ -3,14 +3,8 @@
 # Latest build : github.com/diracs-delta
 
 import os
-import sys
 import csv
 import tempfile
-
-verbose = False
-if len(sys.argv) > 1:
-	if sys.argv[1] == "-v":
-		verbose = True
 
 def main():
 	print('Type "help" for info or type "quit" to quit.')
