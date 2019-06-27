@@ -21,12 +21,14 @@ def main():
 				"folder SWCNT1 contains the .csv files.\n\n"
 				"On UNIX-like systems, the full path begins "
 				"in the root directory /.\n\n"
-				"Make sure the columns are labelled as "
+				"The required columns must be labelled as "
 				"follows:\n"
 				'The cycle index column is labelled as '
 				'"Cycle_Index".\n'
 				'The current column is labelled as '
 				'"Current".\n'
+				'The voltage column is labelled as '
+				'"Voltage".\n'
 				'The discharge capacity column is labelled as '
 				'"Discharge_Capacity".')
 			print("=========================================="*2)
@@ -47,12 +49,21 @@ def main():
 			print('Not a valid option. Defaulting to "n".')
 			recurse = "n"
 
+		trim = raw_input("Trim data? This will not produce any columns "
+					"other than those needed for data "
+					"analysis. [y/N]: ")
+		if trim == "":
+			recurse = "n"
+		if trim != "y" and recurse != "n":
+			print('Not a valid option. Defaulting to "n".')
+			recurse = "n"
+
 		file_list = find_files(dir, recurse)
 		print("[INFO]: Detected files: ")
 		for filename in file_list:
 			print("\t{0}".format(filename))
 
-		state = normalize(file_list)
+		state = normalize(file_list, trim)
 		if state == "no_files":
 			print("[ERROR]: No .csv files exist in the directory.")
 		elif state == "success":
@@ -88,7 +99,7 @@ def find_files(dir, recurse):
 # normalization of the files in `file_list`. Otherwise, the return value is
 # negative and the returned string is used for error output.
 #
-def normalize(file_list):
+def normalize(file_list, trim):
 	errors = False
 	processed = False
 	if(file_list == []):
@@ -121,12 +132,14 @@ def normalize(file_list):
 			os.mkdir(output_dir)
 
 		# check if .csv files are valid
-		csv_reader = csv.reader(open(full_filename))
+		orig_file = open(full_filename)
+		orig_reader = csv.reader(orig_file)
 		csv_valid = True
 		try:
-			header = next(csv_reader)
+			header = next(orig_reader)
 			cycle_index = header.index("Cycle_Index")
 			current_index = header.index("Current")
+			voltage_index = header.index("Voltage")
 			discharge_index = header.index("Discharge_Capacity")
 		except ValueError:
 			print("[ERROR]: This file {0} is not properly named.\n"
@@ -141,6 +154,7 @@ def normalize(file_list):
 			csv_valid = False
 			errors = True
 			continue
+		orig_file.seek(0)
 		processed = True
 
 		# instantiate needed output variables and objects
@@ -149,14 +163,20 @@ def normalize(file_list):
 		clean_file = tempfile.TemporaryFile()
 		clean_reader = csv.reader(clean_file)
 		clean_writer = csv.writer(clean_file)
-		clean_writer.writerow(header)
 
 		# call the clean_csv() and select_cycles() functions
 		print("[INFO]: Performing initial cleaning of {0} in {1}."
 			"".format(filename, tempfile.tempdir))
-		(max_current, max_cycles) = clean_csv(csv_reader, clean_writer,
+		(max_current, max_cycles) = clean_csv(orig_reader, clean_writer,
+							cycle_index,
 							current_index,
-							cycle_index)
+							voltage_index,
+							discharge_index, trim)
+		if(trim == "y"):
+			cycle_index = 0
+			current_index = 1
+			voltage_index = 2
+			discharge_index = 3
 		print("[INFO]: Maximum discharge current of {0} is {1}A after "
 			"{2} cycles.".format(filename, max_current, max_cycles))
 		clean_file.seek(0)
@@ -175,8 +195,9 @@ def normalize(file_list):
 		select_writer = csv.writer(select_file)
 		select_reader = csv.reader(select_file)
 		clean_file.seek(0)
+		header = next(clean_reader)
+
 		select_writer.writerow(header)
-		next(clean_file)
 		cycle_dict = dict()
 		for line in clean_reader:
 			cycle = int(line[cycle_index])
@@ -210,15 +231,30 @@ def normalize(file_list):
 # csv.writer object passed as the parameter "writer". Returns a 2-tuple of the
 # maximum (negative) discharge current detected and the number of cycles present
 # in the data.
-def clean_csv(csv_reader, writer, current_index, cycle_index):
+def clean_csv(reader, writer, cycle_index, current_index, voltage_index, discharge_index, trim):
 	max_current = 0
 	max_cycles = 0
-	for line in csv_reader:
+	header = next(reader)
+	# write header
+	if trim == "y":
+		writer.writerow([header[cycle_index],
+				header[current_index],
+				header[voltage_index],
+				header[discharge_index]])
+	else:
+		writer.writerow(header)
+	for line in reader:
 		data_line = [float(i) if "." in i else int(i) for i in line]
 		current = data_line[current_index]
 		cycle = data_line[cycle_index]
 		if(current < 0):
-			writer.writerow(data_line)
+			if trim == "y":
+				writer.writerow([data_line[cycle_index],
+						data_line[current_index],
+						data_line[voltage_index],
+						data_line[discharge_index]])
+			else:
+				writer.writerow(line)
 			if(current < max_current):
 				max_current = current
 			if(max_cycles < cycle):
