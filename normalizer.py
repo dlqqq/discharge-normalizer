@@ -51,12 +51,12 @@ def main():
 
 		trim = raw_input("Trim data? This will not produce any columns "
 					"other than those needed for data "
-					"analysis. [y/N]: ")
+					"analysis. [Y/n]: ")
 		if trim == "":
-			recurse = "n"
-		if trim != "y" and recurse != "n":
-			print('Not a valid option. Defaulting to "n".')
-			recurse = "n"
+			trim = "y"
+		if trim != "y" and trim != "n":
+			print('Not a valid option. Defaulting to "y".')
+			trim = "y"
 
 		file_list = find_files(dir, recurse)
 		print("[INFO]: Detected files: ")
@@ -216,6 +216,7 @@ def normalize(file_list, trim):
 		select_file.seek(0)
 		output_writer.writerow(header + ["Normalized_Discharge_Capacity"])
 		next(select_file)
+
 		for line in select_reader:
 			cycle = int(line[cycle_index])
 			line += [(float(line[discharge_index])
