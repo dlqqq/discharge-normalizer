@@ -202,6 +202,7 @@ def normalize(file_list, trim):
 		for line in clean_reader:
 			cycle = int(line[cycle_index])
 			capacity = float(line[discharge_index])
+
 			if(cycle in selected_cycles):
 				select_writer.writerow(line)
 				if(capacity > cycle_dict.get(cycle)):
@@ -213,13 +214,12 @@ def normalize(file_list, trim):
 
 		# normalize and write to the final output file
 		select_file.seek(0)
-		output_writer.writerow(header)
+		output_writer.writerow(header + ["Normalized_Discharge_Capacity"])
 		next(select_file)
-
 		for line in select_reader:
 			cycle = int(line[cycle_index])
-			line[discharge_index] = (float(line[discharge_index])
-							/ cycle_dict[cycle])
+			line += [(float(line[discharge_index])
+							/ cycle_dict[cycle])]
 			output_writer.writerow(line)
 	if(processed == False):
 		return "no_success"
