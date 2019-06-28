@@ -214,13 +214,33 @@ def normalize(file_list, trim):
 
 		# normalize and write to the final output file
 		select_file.seek(0)
-		output_writer.writerow(header + ["Normalized_Discharge_Capacity"])
+		output_writer.writerow(header + ["Normalized_Discharge_Capacity"]
+					+ ["dQ/dV"])
 		next(select_file)
-
+		prev_discharge = None
+		prev_voltage = None
+		prev_cycle = None
 		for line in select_reader:
 			cycle = int(line[cycle_index])
+			discharge = float(line[discharge_index])
+			voltage = float(line[voltage_index])
 			line += [(float(line[discharge_index])
 							/ cycle_dict[cycle])]
+			if(prev_cycle != cycle or prev_cycle == None):
+				prev_discharge = None
+				prev_voltage = None
+				line += ["N/A"]
+			if(prev_voltage != None and prev_cycle == cycle):
+				dQ = discharge - prev_discharge
+				dV = voltage - prev_voltage
+				if dV == 0:
+					dQdV = "N/A"
+				else:
+					dQdV = dQ / dV
+				line += [dQdV]
+			prev_discharge = discharge
+			prev_voltage = voltage
+			prev_cycle = cycle
 			output_writer.writerow(line)
 	if(processed == False):
 		return "no_success"
